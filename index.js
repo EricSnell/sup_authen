@@ -261,22 +261,25 @@ app.delete('/users/:userId', passport.authenticate('basic', {
 }), function(req, res) {
   var userId = req.params.userId;
 
-  if (userId !== req.user._id.toString()) {
-    return res.status(401).json({
-      message: 'You cannot delete other users'
-    });
-  }
-  // Find user by user id
-  User.findByIdAndRemove(userId, function(err, user) {
+  User.findById(userId, function(err, user) {
     // Send error if no user is found
     if (!user) {
       return res.status(404).json({
         message: 'User not found'
       });
     }
-
+    
+    if (userId !== req.user._id.toString()) {
+      return res.status(401).json({
+        message: 'You cannot delete other users'
+      });
+    }
+    
+    // Find user by user id
+    User.findByIdAndRemove(userId, function(err, user) {
     // Send back an empty object
     res.status(200).json({});
+    });
   });
 });
 
@@ -297,9 +300,7 @@ app.get('/messages', passport.authenticate('basic', {
     if (err) {
       return res.status(400).json(err);
     }
-    res.status(200).json([{
-      message: 'message authenticated'
-    }, messages]);
+    res.status(200).json(messages);
   });
 });
 
@@ -317,8 +318,6 @@ app.post('/testing', passport.authenticate('basic', {
 app.post('/messages', jsonParser, passport.authenticate('basic', {
   session: false
 }), function(req, res) {
-  console.log('request....', req.body);
-  // console.log('request....', res);
   // Send error if empty text field
   if (!req.body.text) {
     return res.status(422).json({
@@ -352,7 +351,6 @@ app.post('/messages', jsonParser, passport.authenticate('basic', {
 
   User.findById(fromId, function(err, user) {
     if (err) {
-      console.error(err);
       return res.status(500).json({
         message: 'internal error'
       });
@@ -372,7 +370,6 @@ app.post('/messages', jsonParser, passport.authenticate('basic', {
     var toId = req.body.to;
     User.findById(toId, function(err, user) {
       if (err) {
-        console.error(err);
         return res.status(500).json({
           message: 'internal error'
         });
@@ -385,13 +382,11 @@ app.post('/messages', jsonParser, passport.authenticate('basic', {
       // Create message and set message id to url in Header's location
       Message.create(req.body, function(err, message) {
         if (err) {
-          console.error(err);
           return res.status(500).json({
             message: 'internal error'
           });
         }
-        res.location('/messages/' + message._id);
-        return res.status(201).json({});
+        return res.location('/messages/' + message._id).status(201).json({});
       });
     });
   });

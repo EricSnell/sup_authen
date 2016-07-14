@@ -259,37 +259,6 @@ describe('User endpoints', function() {
             res.username.should.equal('alice');
           });
       });
-      // it('should create a user if they don\'t exist', function() {
-      //   // var user = {
-      //   //   _id: '000000000000000000000000',
-      //   //   username: 'joe'
-      //   // };
-      //   // Request to add a new user
-      //   return chai.request(app)
-      //     .put(this.singlePattern.stringify({
-      //       username: 'joe'
-      //     }))
-      //     .auth('alice', '12345')
-      //     .send(user)
-      //     .then(function(res) {
-      //       // Check that an empty object was returned
-      //       res.should.have.status(200);
-      //       res.type.should.equal('application/json');
-      //       res.charset.should.equal('utf-8');
-      //       res.body.should.be.an('object');
-      //       res.body.should.be.empty;
-
-      //       // Fetch the user from the database
-      //       return User.findById('000000000000000000000000').exec();
-      //     })
-      //     .then(function(res) {
-      //       // Check that the user has been added
-      //       should.exist(res);
-      //       res.should.have.property('username');
-      //       res.username.should.be.a('string');
-      //       res.username.should.equal('joe');
-      //     });
-      // });
       it('should reject users without a new password', function() {
         // var user = {
         //   _id: '000000000000000000000000'
@@ -321,18 +290,18 @@ describe('User endpoints', function() {
             // spy.called.should.be.false;
           });
       });
-      it('should reject non-string usernames', function() {
-        var user = {
-          _id: '000000000000000000000000',
-          username: 42
+      it('should reject non-string password', function() {
+        var newPassword = {
+          password: 42
         };
         var spy = makeSpy();
         // Add a user with a non-string username
         return chai.request(app)
           .put(this.singlePattern.stringify({
-            userId: user._id
+            userId: 'aaaaaaaaaaaaaaaaaaaaaaaa'
           }))
-          .send(user)
+          .auth('alice', '12345')
+          .send(newPassword)
           .then(spy)
           .catch(function(err) {
             // If the request fails, make sure it contains the
@@ -343,7 +312,7 @@ describe('User endpoints', function() {
             res.charset.should.equal('utf-8');
             res.body.should.be.an('object');
             res.body.should.have.property('message');
-            res.body.message.should.equal('Incorrect field type: username');
+            res.body.message.should.equal('Incorrect field type: password');
           })
           .then(function() {
             // Check that the request didn't succeed
@@ -360,6 +329,7 @@ describe('User endpoints', function() {
           .delete(this.singlePattern.stringify({
             userId: '000000000000000000000000'
           }))
+          .auth('alice', '12345')
           .then(spy)
           .catch(function(err) {
             // If the request fails, make sure it contains the
@@ -378,20 +348,12 @@ describe('User endpoints', function() {
           });
       });
       it('should delete a user', function() {
-        var user = {
-          username: 'joe'
-        };
-        var userId;
-        // Create a user in the database
-        return new User(user).save()
-          .then(function(res) {
-            userId = res._id.toString();
             // Request to delete the user
             return chai.request(app)
               .delete(this.singlePattern.stringify({
-                userId: userId
-              }));
-          }.bind(this))
+                userId: 'aaaaaaaaaaaaaaaaaaaaaaaa'
+              }))
+          .auth('alice', '12345')
           .then(function(res) {
             // Make sure that an empty object was returned
             res.should.have.status(200);
@@ -401,7 +363,7 @@ describe('User endpoints', function() {
             res.body.should.be.empty;
 
             // Try to fetch the user from the database
-            return User.findById(userId);
+            return User.findById('aaaaaaaaaaaaaaaaaaaaaaaa');
           })
           .then(function(res) {
             // Make sure that no user could be fetched

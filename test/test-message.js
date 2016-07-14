@@ -5,6 +5,7 @@ var chaiHttp = require('chai-http');
 var mongoose = require('mongoose');
 var UrlPattern = require('url-pattern');
 var app = require('../index').app;
+var bcrypt = require('bcrypt');
 
 var User = require('../models/user');
 var Message = require('../models/message');
@@ -23,28 +24,35 @@ describe('Message endpoints', function() {
         // Clear the database
         mongoose.connection.db.dropDatabase(function(err, res) {
             // Add three example users
-            this.alice = {
-                username: 'alice',
-                _id: 'aaaaaaaaaaaaaaaaaaaaaaaa'
-            };
+            bcrypt.genSalt(10, function(err, salt) {
+                bcrypt.hash('12345', salt, function(err, hash) {
+                    this.alice = {
+                        username: 'alice',
+                        _id: 'aaaaaaaaaaaaaaaaaaaaaaaa',
+                        password: hash
+                    };
 
-            this.bob = {
-                username: 'bob',
-                _id: 'bbbbbbbbbbbbbbbbbbbbbbbb'
-            };
+                    this.bob = {
+                        username: 'bob',
+                        _id: 'bbbbbbbbbbbbbbbbbbbbbbbb',
+                        password: hash
+                    };
 
-            this.chuck = {
-                username: 'chuck',
-                _id: 'cccccccccccccccccccccccc'
-            };
+                    this.chuck = {
+                        username: 'chuck',
+                        _id: 'cccccccccccccccccccccccc',
+                        password: hash
+                    };
 
-            // Create users
-            var promiseA = new User(this.alice).save();
-            var promiseB = new User(this.bob).save();
-            var promiseC = new User(this.chuck).save();
-            Promise.all([promiseA, promiseB, promiseC]).then(function() {
-                done();
-            });
+                    // Create users
+                    var promiseA = new User(this.alice).save();
+                    var promiseB = new User(this.bob).save();
+                    var promiseC = new User(this.chuck).save();
+                    Promise.all([promiseA, promiseB, promiseC]).then(function() {
+                        done();
+                    });
+                }.bind(this));
+            }.bind(this));
         }.bind(this));
     });
 
@@ -54,6 +62,7 @@ describe('Message endpoints', function() {
                 // Get the list of messages
                 return chai.request(app)
                     .get(this.listPattern.stringify())
+                    .auth('alice', '12345')
                     .then(function(res) {
                         // Check that it's an empty array
                         res.should.have.status(200);
@@ -88,62 +97,63 @@ describe('Message endpoints', function() {
 
                 // Save them to the database
                 return messageA.save().then(function() {
-                    return messageB.save();
-                }).then(function() {
-                    return messageC.save();
-                })
-                .then(function(res) {
-                    // Get the list of messages
-                    return chai.request(app)
-                        .get(this.listPattern.stringify());
-                }.bind(this))
-                .then(function(res) {
-                    // Check that the messages are in the array
-                    res.should.have.status(200);
-                    res.type.should.equal('application/json');
-                    res.charset.should.equal('utf-8');
-                    res.body.should.be.an('array');
-                    res.body.length.should.equal(3);
+                        return messageB.save();
+                    }).then(function() {
+                        return messageC.save();
+                    })
+                    .then(function(res) {
+                        // Get the list of messages
+                        return chai.request(app)
+                            .get(this.listPattern.stringify())
+                            .auth('alice', '12345');
+                    }.bind(this))
+                    .then(function(res) {
+                        // Check that the messages are in the array
+                        res.should.have.status(200);
+                        res.type.should.equal('application/json');
+                        res.charset.should.equal('utf-8');
+                        res.body.should.be.an('array');
+                        res.body.length.should.equal(3);
 
-                    var message = res.body[0];
-                    message.should.be.an('object');
-                    message.should.have.property('text');
-                    message.text.should.be.a('string');
-                    message.text.should.equal(messageA.text);
-                    message.should.have.property('to');
-                    message.from.should.be.an('object');
-                    message.from.should.have.property('username');
-                    message.from.username.should.equal(this.alice.username);
-                    message.to.should.be.an('object');
-                    message.to.should.have.property('username');
-                    message.to.username.should.equal(this.bob.username);
+                        var message = res.body[0];
+                        message.should.be.an('object');
+                        message.should.have.property('text');
+                        message.text.should.be.a('string');
+                        message.text.should.equal(messageA.text);
+                        message.should.have.property('to');
+                        message.from.should.be.an('object');
+                        message.from.should.have.property('username');
+                        message.from.username.should.equal(this.alice.username);
+                        message.to.should.be.an('object');
+                        message.to.should.have.property('username');
+                        message.to.username.should.equal(this.bob.username);
 
-                    var message = res.body[1];
-                    message.should.be.an('object');
-                    message.should.have.property('text');
-                    message.text.should.be.a('string');
-                    message.text.should.equal(messageB.text);
-                    message.should.have.property('to');
-                    message.from.should.be.an('object');
-                    message.from.should.have.property('username');
-                    message.from.username.should.equal(this.alice.username);
-                    message.to.should.be.an('object');
-                    message.to.should.have.property('username');
-                    message.to.username.should.equal(this.chuck.username);
+                        var message = res.body[1];
+                        message.should.be.an('object');
+                        message.should.have.property('text');
+                        message.text.should.be.a('string');
+                        message.text.should.equal(messageB.text);
+                        message.should.have.property('to');
+                        message.from.should.be.an('object');
+                        message.from.should.have.property('username');
+                        message.from.username.should.equal(this.alice.username);
+                        message.to.should.be.an('object');
+                        message.to.should.have.property('username');
+                        message.to.username.should.equal(this.chuck.username);
 
-                    var message = res.body[2];
-                    message.should.be.an('object');
-                    message.should.have.property('text');
-                    message.text.should.be.a('string');
-                    message.text.should.equal(messageC.text);
-                    message.should.have.property('to');
-                    message.from.should.be.an('object');
-                    message.from.should.have.property('username');
-                    message.from.username.should.equal(this.bob.username);
-                    message.to.should.be.an('object');
-                    message.to.should.have.property('username');
-                    message.to.username.should.equal(this.chuck.username);
-                }.bind(this));
+                        var message = res.body[2];
+                        message.should.be.an('object');
+                        message.should.have.property('text');
+                        message.text.should.be.a('string');
+                        message.text.should.equal(messageC.text);
+                        message.should.have.property('to');
+                        message.from.should.be.an('object');
+                        message.from.should.have.property('username');
+                        message.from.username.should.equal(this.bob.username);
+                        message.to.should.be.an('object');
+                        message.to.should.have.property('username');
+                        message.to.username.should.equal(this.chuck.username);
+                    }.bind(this));
             });
             it('should allow filtering by from', function() {
                 var messageA = {
@@ -169,50 +179,51 @@ describe('Message endpoints', function() {
 
                 // Save them to the database
                 return messageA.save().then(function() {
-                    return messageB.save();
-                }).then(function() {
-                    return messageC.save();
-                })
-                .then(function(res) {
-                    // Get the list of messages from Alice
-                    var url = this.listPattern.stringify() + '?from=' + this.alice._id;
-                    return chai.request(app)
-                        .get(url);
-                }.bind(this))
-                .then(function(res) {
-                    // Check that the correct messages are in the array
-                    res.should.have.status(200);
-                    res.type.should.equal('application/json');
-                    res.charset.should.equal('utf-8');
-                    res.body.should.be.an('array');
-                    res.body.length.should.equal(2);
+                        return messageB.save();
+                    }).then(function() {
+                        return messageC.save();
+                    })
+                    .then(function(res) {
+                        // Get the list of messages from Alice
+                        var url = this.listPattern.stringify() + '?from=' + this.alice._id;
+                        return chai.request(app)
+                            .get(url)
+                            .auth('alice', '12345');
+                    }.bind(this))
+                    .then(function(res) {
+                        // Check that the correct messages are in the array
+                        res.should.have.status(200);
+                        res.type.should.equal('application/json');
+                        res.charset.should.equal('utf-8');
+                        res.body.should.be.an('array');
+                        res.body.length.should.equal(2);
 
-                    var message = res.body[0];
-                    message.should.be.an('object');
-                    message.should.have.property('text');
-                    message.text.should.be.a('string');
-                    message.text.should.equal(messageA.text);
-                    message.should.have.property('to');
-                    message.from.should.be.an('object');
-                    message.from.should.have.property('username');
-                    message.from.username.should.equal(this.alice.username);
-                    message.to.should.be.an('object');
-                    message.to.should.have.property('username');
-                    message.to.username.should.equal(this.bob.username);
+                        var message = res.body[0];
+                        message.should.be.an('object');
+                        message.should.have.property('text');
+                        message.text.should.be.a('string');
+                        message.text.should.equal(messageA.text);
+                        message.should.have.property('to');
+                        message.from.should.be.an('object');
+                        message.from.should.have.property('username');
+                        message.from.username.should.equal(this.alice.username);
+                        message.to.should.be.an('object');
+                        message.to.should.have.property('username');
+                        message.to.username.should.equal(this.bob.username);
 
-                    var message = res.body[1];
-                    message.should.be.an('object');
-                    message.should.have.property('text');
-                    message.text.should.be.a('string');
-                    message.text.should.equal(messageB.text);
-                    message.should.have.property('to');
-                    message.from.should.be.an('object');
-                    message.from.should.have.property('username');
-                    message.from.username.should.equal(this.alice.username);
-                    message.to.should.be.an('object');
-                    message.to.should.have.property('username');
-                    message.to.username.should.equal(this.chuck.username);
-                }.bind(this));
+                        var message = res.body[1];
+                        message.should.be.an('object');
+                        message.should.have.property('text');
+                        message.text.should.be.a('string');
+                        message.text.should.equal(messageB.text);
+                        message.should.have.property('to');
+                        message.from.should.be.an('object');
+                        message.from.should.have.property('username');
+                        message.from.username.should.equal(this.alice.username);
+                        message.to.should.be.an('object');
+                        message.to.should.have.property('username');
+                        message.to.username.should.equal(this.chuck.username);
+                    }.bind(this));
             });
             it('should allow filtering by to', function() {
                 var messageA = {
@@ -238,50 +249,51 @@ describe('Message endpoints', function() {
 
                 // Save them to the database
                 return messageA.save().then(function() {
-                    return messageB.save();
-                }).then(function() {
-                    return messageC.save();
-                })
-                .then(function(res) {
-                    // Get the list of messages to Chuck
-                    var url = this.listPattern.stringify() + '?to=' + this.chuck._id;
-                    return chai.request(app)
-                        .get(url);
-                }.bind(this))
-                .then(function(res) {
-                    // Check that the correct messages are in the array
-                    res.should.have.status(200);
-                    res.type.should.equal('application/json');
-                    res.charset.should.equal('utf-8');
-                    res.body.should.be.an('array');
-                    res.body.length.should.equal(2);
+                        return messageB.save();
+                    }).then(function() {
+                        return messageC.save();
+                    })
+                    .then(function(res) {
+                        // Get the list of messages to Chuck
+                        var url = this.listPattern.stringify() + '?to=' + this.chuck._id;
+                        return chai.request(app)
+                            .get(url)
+                            .auth('alice', '12345');
+                    }.bind(this))
+                    .then(function(res) {
+                        // Check that the correct messages are in the array
+                        res.should.have.status(200);
+                        res.type.should.equal('application/json');
+                        res.charset.should.equal('utf-8');
+                        res.body.should.be.an('array');
+                        res.body.length.should.equal(2);
 
-                    var message = res.body[0];
-                    message.should.be.an('object');
-                    message.should.have.property('text');
-                    message.text.should.be.a('string');
-                    message.text.should.equal(messageB.text);
-                    message.should.have.property('to');
-                    message.from.should.be.an('object');
-                    message.from.should.have.property('username');
-                    message.from.username.should.equal(this.alice.username);
-                    message.to.should.be.an('object');
-                    message.to.should.have.property('username');
-                    message.to.username.should.equal(this.chuck.username);
+                        var message = res.body[0];
+                        message.should.be.an('object');
+                        message.should.have.property('text');
+                        message.text.should.be.a('string');
+                        message.text.should.equal(messageB.text);
+                        message.should.have.property('to');
+                        message.from.should.be.an('object');
+                        message.from.should.have.property('username');
+                        message.from.username.should.equal(this.alice.username);
+                        message.to.should.be.an('object');
+                        message.to.should.have.property('username');
+                        message.to.username.should.equal(this.chuck.username);
 
-                    var message = res.body[1];
-                    message.should.be.an('object');
-                    message.should.have.property('text');
-                    message.text.should.be.a('string');
-                    message.text.should.equal(messageC.text);
-                    message.should.have.property('to');
-                    message.from.should.be.an('object');
-                    message.from.should.have.property('username');
-                    message.from.username.should.equal(this.bob.username);
-                    message.to.should.be.an('object');
-                    message.to.should.have.property('username');
-                    message.to.username.should.equal(this.chuck.username);
-                }.bind(this));
+                        var message = res.body[1];
+                        message.should.be.an('object');
+                        message.should.have.property('text');
+                        message.text.should.be.a('string');
+                        message.text.should.equal(messageC.text);
+                        message.should.have.property('to');
+                        message.from.should.be.an('object');
+                        message.from.should.have.property('username');
+                        message.from.username.should.equal(this.bob.username);
+                        message.to.should.be.an('object');
+                        message.to.should.have.property('username');
+                        message.to.username.should.equal(this.chuck.username);
+                    }.bind(this));
             });
             it('should allow filtering by from and to', function() {
                 var messageA = {
@@ -307,39 +319,40 @@ describe('Message endpoints', function() {
 
                 // Save them to the database
                 return messageA.save().then(function() {
-                    return messageB.save();
-                }).then(function() {
-                    return messageC.save();
-                })
-                .then(function(res) {
-                    // Get the list of messages from Alice to Bob
-                    var url = this.listPattern.stringify() +
-                              '?from=' + this.alice._id +
-                              '&to=' + this.bob._id;
-                    return chai.request(app)
-                        .get(url);
-                }.bind(this))
-                .then(function(res) {
-                    // Check that the correct messages are in the array
-                    res.should.have.status(200);
-                    res.type.should.equal('application/json');
-                    res.charset.should.equal('utf-8');
-                    res.body.should.be.an('array');
-                    res.body.length.should.equal(1);
+                        return messageB.save();
+                    }).then(function() {
+                        return messageC.save();
+                    })
+                    .then(function(res) {
+                        // Get the list of messages from Alice to Bob
+                        var url = this.listPattern.stringify() +
+                            '?from=' + this.alice._id +
+                            '&to=' + this.bob._id;
+                        return chai.request(app)
+                            .get(url)
+                            .auth('alice', '12345');
+                    }.bind(this))
+                    .then(function(res) {
+                        // Check that the correct messages are in the array
+                        res.should.have.status(200);
+                        res.type.should.equal('application/json');
+                        res.charset.should.equal('utf-8');
+                        res.body.should.be.an('array');
+                        res.body.length.should.equal(1);
 
-                    var message = res.body[0];
-                    message.should.be.an('object');
-                    message.should.have.property('text');
-                    message.text.should.be.a('string');
-                    message.text.should.equal(messageA.text);
-                    message.should.have.property('to');
-                    message.from.should.be.an('object');
-                    message.from.should.have.property('username');
-                    message.from.username.should.equal(this.alice.username);
-                    message.to.should.be.an('object');
-                    message.to.should.have.property('username');
-                    message.to.username.should.equal(this.bob.username);
-                }.bind(this));
+                        var message = res.body[0];
+                        message.should.be.an('object');
+                        message.should.have.property('text');
+                        message.text.should.be.a('string');
+                        message.text.should.equal(messageA.text);
+                        message.should.have.property('to');
+                        message.from.should.be.an('object');
+                        message.from.should.have.property('username');
+                        message.from.username.should.equal(this.alice.username);
+                        message.to.should.be.an('object');
+                        message.to.should.have.property('username');
+                        message.to.username.should.equal(this.bob.username);
+                    }.bind(this));
             });
         });
         describe('POST', function() {
@@ -353,6 +366,7 @@ describe('Message endpoints', function() {
                 return chai.request(app)
                     .post(this.listPattern.stringify())
                     .send(message)
+                    .auth('alice', '12345')
                     .then(function(res) {
                         // Check that an empty object was returned
                         res.should.have.status(201);
@@ -390,6 +404,7 @@ describe('Message endpoints', function() {
                 return chai.request(app)
                     .post(this.listPattern.stringify())
                     .send(message)
+                    .auth('alice', '12345')
                     .then(spy)
                     .catch(function(err) {
                         // If the request fails, make sure it contains the
@@ -418,6 +433,7 @@ describe('Message endpoints', function() {
                 return chai.request(app)
                     .post(this.listPattern.stringify())
                     .send(message)
+                    .auth('alice', '12345')
                     .then(spy)
                     .catch(function(err) {
                         // If the request fails, make sure it contains the
@@ -446,6 +462,7 @@ describe('Message endpoints', function() {
                 return chai.request(app)
                     .post(this.listPattern.stringify())
                     .send(message)
+                    .auth('alice', '12345')
                     .then(spy)
                     .catch(function(err) {
                         // If the request fails, make sure it contains the
@@ -474,6 +491,7 @@ describe('Message endpoints', function() {
                 return chai.request(app)
                     .post(this.listPattern.stringify())
                     .send(message)
+                    .auth('alice', '12345')
                     .then(spy)
                     .catch(function(err) {
                         // If the request fails, make sure it contains the
@@ -501,6 +519,7 @@ describe('Message endpoints', function() {
                 return chai.request(app)
                     .post(this.listPattern.stringify())
                     .send(message)
+                    .auth('alice', '12345')
                     .then(spy)
                     .catch(function(err) {
                         // If the request fails, make sure it contains the
@@ -529,6 +548,7 @@ describe('Message endpoints', function() {
                 return chai.request(app)
                     .post(this.listPattern.stringify())
                     .send(message)
+                    .auth('alice', '12345')
                     .then(spy)
                     .catch(function(err) {
                         // If the request fails, make sure it contains the
@@ -555,7 +575,10 @@ describe('Message endpoints', function() {
                 var spy = makeSpy();
                 // Get a message which doesn't exist
                 return chai.request(app)
-                    .get(this.singlePattern.stringify({messageId: '000000000000000000000000'}))
+                    .get(this.singlePattern.stringify({
+                        messageId: '000000000000000000000000'
+                    }))
+                    .auth('alice', '12345')
                     .then(spy)
                     .catch(function(err) {
                         // If the request fails, make sure it contains the
@@ -588,7 +611,8 @@ describe('Message endpoints', function() {
                         return chai.request(app)
                             .get(this.singlePattern.stringify({
                                 messageId: messageId
-                            }));
+                            }))
+                            .auth('alice', '12345');
                     }.bind(this))
                     .then(function(res) {
                         // Check that the message is returned
