@@ -423,7 +423,7 @@ app.get('/messages/:messageId', passport.authenticate('basic', {
 
 /*=========== RUN SERVER ============*/
 var runServer = function(callback) {
-  var databaseUri = process.env.DATABASE_URI || global.databaseUri || 'mongodb://localhost/sup';
+  var databaseUri = process.env.DATABASE_URI || global.databaseUri || 'mongodb://robbykim:travisdeployment@ds011903.mlab.com:11903/travisdeployment';
   mongoose.connect(databaseUri).then(function() {
     var port = process.env.PORT || 8080;
     var server = app.listen(port, function() {
