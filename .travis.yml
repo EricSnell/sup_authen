@@ -11,4 +11,11 @@ addons:
     - mongodb-org-server
     - g++-4.8
 env:
- - CXX=g++-4.8
+- CXX=g++-4.8
+deploy:
+  provider: heroku
+  api_key:
+    secure: jqyVcV5VrPV8y25OFpSMzMWlwAhE82o4rtsRF3pqhkImjVZR528snYNm1yqSsZfAhdodBXDAk1+LhWUkxXhEQVBoH/4/hotLjDtVfkr0qC691ZpajHtmwXjxrDGSGOwPTYnMzwekzQIWL4mxVQ+hNoT5hUv083OdNGhJV/nM1P5d2XjIz0DuKqi5UvjYqOPpKRZZ5w4XMnx2AkLN5+j3jvzU4hSURKwAfH+uoGF0Cq4AxHB9JijfdDA6QAZ61TzSOCAdQLJRMl9Qo7lt+TdL+8/aHRFVegocXE172o1VIm6TqLoGN5gvrY8HB+YfkOPPHb/P0PPoOTCCJVB7Ch42D67cHOsis9XQceX4BRGdgR0BkoPnp5kSI7mr8WMpZggpM9oHvdyjtDKDXFhiAxkXDl9zBiigDGN/VrSmYt7+fcqW+r/M3iSUH+EJqlEOnY1nbjpQHD7Whvx+Acdymr873wI36uvt4VNcAPOwGb3/M3atQ2tKkFL9gGLObPvzIIU+pNohfYWmxPytQlVHLZtsTsCmhOpxlVU+/TTPu0i5Fchw1mKb+F4Nu5jAG6LnRNygA3rTtpptyLjksJiqY26no+PzielwMsjwaHceGDI9xeELR7P23S+O1z6sopDiSc/td9oU5uMIFrhSh66csJP6hhuLdM6MgmQ0xS/9R+6WDWA=
+  app: intelligent-vin-40749
+  on:
+    repo: EricSnell/sup_authen
