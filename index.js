@@ -392,6 +392,7 @@ app.post('/messages', jsonParser, passport.authenticate('basic', {
   });
 });
 
+// this is for travis to see and put into heroku
 
 /*===================================
 
@@ -415,11 +416,7 @@ app.get('/messages/:messageId', passport.authenticate('basic', {
     }
     res.status(200).json(message);
   });
-});
-
-
-
-
+}); 
 
 /*=========== RUN SERVER ============*/
 var runServer = function(callback) {
